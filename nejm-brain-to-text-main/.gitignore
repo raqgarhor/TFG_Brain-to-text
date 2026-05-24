@@ -7,3 +7,12 @@
 
 # ignore ds_store files
 .DS_Store
+
+#carpeta data
+data/*
+!data/README.md
+!data/.gitignore
+!data/t15_copyTaskData_description.csv
+
+#venv
+venv/*
