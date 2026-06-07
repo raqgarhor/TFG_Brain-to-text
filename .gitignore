@@ -1,0 +1,24 @@
+# Datos y modelos grandes
+nejm-brain-to-text-main/data/
+nejm-brain-to-text-main/mi_modelo/salidas/
+
+# Checkpoints y modelos generados
+*.pt
+*.pth
+*.ckpt
+best_checkpoint
+
+# Datos cientificos grandes
+*.hdf5
+*.h5
+
+# Entornos y cache
+.venv/
+.venv-linux/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Sistema/editor
+.DS_Store
+.vscode/
