@@ -25,3 +25,6 @@ __pycache__/
 
 # Archivos de configuración sensibles
 .env
+
+# Archivos de base de datos
+*.sql
