@@ -22,3 +22,6 @@ __pycache__/
 # Sistema/editor
 .DS_Store
 .vscode/
+
+# Archivos de configuración sensibles
+.env
