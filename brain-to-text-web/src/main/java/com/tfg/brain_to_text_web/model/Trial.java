@@ -43,6 +43,9 @@ public class Trial {
     @Column(name = "logits_shape")
     private String logitsShape;
 
+    @Column(name = "signal_image_path")
+    private String signalImagePath;
+
     private String notes;
 
     @Column(name = "created_at", insertable = false, updatable = false)
@@ -113,6 +116,14 @@ public class Trial {
 
     public void setLogitsShape(String logitsShape) {
         this.logitsShape = logitsShape;
+    }
+
+    public String getSignalImagePath() {
+        return signalImagePath;
+    }
+
+    public void setSignalImagePath(String signalImagePath) {
+        this.signalImagePath = signalImagePath;
     }
 
     public String getNotes() {

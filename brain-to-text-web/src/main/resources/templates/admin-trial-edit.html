@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar ensayo - Brain-to-Text</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" th:href="@{/}">Brain-to-Text</a>
+    <nav class="nav-actions">
+        <a th:href="@{/trials}">Ensayos</a>
+        <a th:href="@{/admin}">Admin</a>
+        <form class="logout-form" th:action="@{/admin/logout}" method="post">
+            <button type="submit">Salir</button>
+        </form>
+    </nav>
+</header>
+
+<main class="page admin-page">
+    <section class="page-heading admin-heading">
+        <div>
+            <p class="eyebrow">Edición de ensayo</p>
+            <h1 th:text="${trial.trialKey}">trial_0000</h1>
+            <p th:text="${trial.sessionName} + ' · ' + ${trial.split}">
+                t15.2023.08.13 · val
+            </p>
+        </div>
+        <a class="button ghost" th:href="@{/admin}">Volver al panel</a>
+    </section>
+
+    <p class="form-alert success" th:if="${adminMessage}" th:text="${adminMessage}">
+        Cambios guardados.
+    </p>
+    <p class="form-alert error" th:if="${adminError}" th:text="${adminError}">
+        No se pudo guardar.
+    </p>
+
+    <section class="admin-section">
+        <div class="section-title">
+            <p class="eyebrow">RF11</p>
+            <h2>Modificar ensayo</h2>
+            <p>Permite corregir metadatos, completar frases reales o actualizar rutas de imagen.</p>
+        </div>
+
+        <form class="admin-form admin-grid-form"
+              th:action="@{/admin/trials/{id}(id=${trial.id})}"
+              method="post">
+            <label>
+                Sesión
+                <input type="text" name="sessionName" th:value="${trial.sessionName}" required>
+            </label>
+
+            <label>
+                Conjunto
+                <select name="split" required>
+                    <option value="val" th:selected="${trial.split == 'val'}">val</option>
+                    <option value="test" th:selected="${trial.split == 'test'}">test</option>
+                    <option value="train" th:selected="${trial.split == 'train'}">train</option>
+                </select>
+            </label>
+
+            <label>
+                Trial
+                <input type="text" name="trialKey" th:value="${trial.trialKey}" required>
+            </label>
+
+            <label>
+                Forma entrada
+                <input type="text" name="inputShape" th:value="${trial.inputShape}">
+            </label>
+
+            <label>
+                Forma logits
+                <input type="text" name="logitsShape" th:value="${trial.logitsShape}">
+            </label>
+
+            <label>
+                Ruta imagen señal
+                <input type="text" name="signalImagePath" th:value="${trial.signalImagePath}">
+            </label>
+
+            <label class="full-field">
+                Frase real
+                <textarea name="realSentence" rows="2" th:text="${trial.realSentence}"></textarea>
+            </label>
+
+            <label class="full-field">
+                Fonemas reales
+                <textarea name="realPhonemes" rows="2" th:text="${trial.realPhonemes}"></textarea>
+            </label>
+
+            <label class="full-field">
+                Notas
+                <textarea name="notes" rows="2" th:text="${trial.notes}"></textarea>
+            </label>
+
+            <div class="full-field form-actions">
+                <button class="button primary" type="submit">Guardar cambios del ensayo</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="admin-section">
+        <div class="section-title">
+            <p class="eyebrow">RF13</p>
+            <h2>Crear predicción</h2>
+            <p>
+                Permite añadir una predicción asociada a este ensayo, indicando el modelo utilizado,
+                los fonemas, el texto generado y las métricas disponibles.
+            </p>
+        </div>
+
+        <form class="admin-form admin-grid-form"
+              th:action="@{/admin/trials/{id}/predictions(id=${trial.id})}"
+              method="post">
+            <label>
+                Nombre interno del modelo
+                <input type="text" name="modelName" placeholder="baseline o proposed" required>
+            </label>
+
+            <label>
+                Etiqueta visible
+                <input type="text" name="modelLabel" placeholder="Baseline RNN-GRU" required>
+            </label>
+
+            <label>
+                PER checkpoint
+                <input type="text" name="checkpointPer" placeholder="0.0748">
+            </label>
+
+            <label>
+                PER
+                <input type="text" name="perValue" placeholder="0.2380">
+            </label>
+
+            <label>
+                WER
+                <input type="text" name="werValue" placeholder="0.1200">
+            </label>
+
+            <label>
+                Texto parcial
+                <input type="text" name="partialText" placeholder="texto intermedio del LM">
+            </label>
+
+            <label class="full-field">
+                Fonemas predichos
+                <textarea name="predictedPhonemes" rows="3"></textarea>
+            </label>
+
+            <label class="full-field">
+                Texto predicho
+                <textarea name="predictedText" rows="2"></textarea>
+            </label>
+
+            <label class="full-field">
+                Notas
+                <textarea name="notes" rows="2"></textarea>
+            </label>
+
+            <div class="full-field form-actions">
+                <button class="button primary" type="submit">Crear predicción</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="admin-section">
+        <div class="section-title">
+            <p class="eyebrow">RF13 y RF14</p>
+            <h2>Predicciones y candidatos almacenados</h2>
+            <p>
+                Cada predicción puede modificarse o eliminarse. Sus frases candidatas también pueden
+                crearse, editarse y borrarse desde esta misma pantalla.
+            </p>
+        </div>
+
+        <article class="prediction-admin-card" th:each="prediction : ${predictions}">
+            <div class="prediction-admin-title">
+                <div>
+                    <p class="eyebrow" th:text="${prediction.modelName}">baseline</p>
+                    <h3 th:text="${prediction.modelLabel}">Baseline RNN-GRU</h3>
+                </div>
+                <form th:action="@{/admin/trials/{trialId}/predictions/{predictionId}/delete(trialId=${trial.id}, predictionId=${prediction.id})}"
+                      method="post">
+                    <button class="danger-button" type="submit">Eliminar predicción</button>
+                </form>
+            </div>
+
+            <form class="admin-form admin-grid-form"
+                  th:action="@{/admin/trials/{trialId}/predictions/{predictionId}(trialId=${trial.id}, predictionId=${prediction.id})}"
+                  method="post">
+                <label>
+                    Nombre interno
+                    <input type="text" name="modelName" th:value="${prediction.modelName}" required>
+                </label>
+
+                <label>
+                    Etiqueta visible
+                    <input type="text" name="modelLabel" th:value="${prediction.modelLabel}" required>
+                </label>
+
+                <label>
+                    PER checkpoint
+                    <input type="text" name="checkpointPer" th:value="${prediction.checkpointPer}">
+                </label>
+
+                <label>
+                    PER
+                    <input type="text" name="perValue" th:value="${prediction.perValue}">
+                </label>
+
+                <label>
+                    WER
+                    <input type="text" name="werValue" th:value="${prediction.werValue}">
+                </label>
+
+                <label>
+                    Texto parcial
+                    <input type="text" name="partialText" th:value="${prediction.partialText}">
+                </label>
+
+                <label class="full-field">
+                    Fonemas predichos
+                    <textarea name="predictedPhonemes" rows="3" th:text="${prediction.predictedPhonemes}"></textarea>
+                </label>
+
+                <label class="full-field">
+                    Texto predicho
+                    <textarea name="predictedText" rows="2" th:text="${prediction.predictedText}"></textarea>
+                </label>
+
+                <label class="full-field">
+                    Notas
+                    <textarea name="notes" rows="2" th:text="${prediction.notes}"></textarea>
+                </label>
+
+                <div class="full-field form-actions">
+                    <button class="button primary" type="submit">Guardar predicción</button>
+                </div>
+            </form>
+
+            <div class="candidate-admin-block">
+                <h4>Candidatos del modelo de lenguaje</h4>
+
+                <form class="candidate-form"
+                      th:action="@{/admin/trials/{trialId}/predictions/{predictionId}/candidates(trialId=${trial.id}, predictionId=${prediction.id})}"
+                      method="post">
+                    <input type="number" name="rank" min="1" placeholder="Rank" required>
+                    <input type="text" name="candidateText" placeholder="Nueva frase candidata" required>
+                    <button class="button ghost" type="submit">Añadir candidato</button>
+                </form>
+
+                <div class="candidate-list">
+                    <div class="candidate-row" th:each="candidate : ${prediction.candidates}">
+                        <form th:action="@{/admin/trials/{trialId}/candidates/{candidateId}(trialId=${trial.id}, candidateId=${candidate.id})}"
+                              method="post">
+                            <input type="number" name="rank" min="1" th:value="${candidate.rank}" required>
+                            <input type="text" name="candidateText" th:value="${candidate.candidateText}" required>
+                            <button class="button ghost" type="submit">Guardar</button>
+                        </form>
+
+                        <form th:action="@{/admin/trials/{trialId}/candidates/{candidateId}/delete(trialId=${trial.id}, candidateId=${candidate.id})}"
+                              method="post">
+                            <button class="danger-button" type="submit">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <p class="empty-admin-note" th:if="${#lists.isEmpty(predictions)}">
+            Este ensayo todavía no tiene predicciones asociadas.
+        </p>
+    </section>
+</main>
+</body>
+</html>

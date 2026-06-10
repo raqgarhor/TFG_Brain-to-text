@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${trial.trialKey} + ' - Brain-to-Text'">Trial</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script defer th:src="@{/js/speech.js}"></script>
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" th:href="@{/}">Brain-to-Text</a>
+    <nav class="nav-actions">
+        <a th:href="@{/trials}">Ensayos</a>
+        <a th:href="@{/admin}">Admin</a>
+    </nav>
+</header>
+
+<main class="page detail-page">
+    <section class="detail-hero">
+        <div>
+            <p class="eyebrow" th:text="${trial.sessionName}">t15.2023.08.13</p>
+            <h1 th:text="${trial.trialKey}">trial_0000</h1>
+            <p th:text="${trial.split == 'test' ? 'Ensayo de test sin frase real disponible.' : trial.realSentence}">
+                You can see the code at this point as well.
+            </p>
+        </div>
+
+        <div class="model-switch">
+            <form th:action="@{/trials/{id}/model(id=${trial.id})}" method="post">
+                <input type="hidden" name="modelName" value="baseline">
+                <button type="submit" th:classappend="${selectedModel == 'baseline'} ? ' active'">Baseline</button>
+            </form>
+            <form th:action="@{/trials/{id}/model(id=${trial.id})}" method="post">
+                <input type="hidden" name="modelName" value="proposed">
+                <button type="submit" th:classappend="${selectedModel == 'proposed'} ? ' active'">Modelo propuesto</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="empty-state" th:if="${prediction == null}">
+        <h2>No hay predicción disponible</h2>
+        <p>Este ensayo no tiene resultados almacenados para el modelo seleccionado.</p>
+    </section>
+
+    <section th:if="${prediction != null}" class="phase-carousel" data-step-viewer>
+        <aside class="phase-nav" aria-label="Navegación entre fases">
+            <button class="step-arrow" type="button" data-prev-step aria-label="Fase anterior">←</button>
+            <span data-step-label>1 / 1</span>
+            <button class="step-arrow" type="button" data-next-step aria-label="Siguiente fase">→</button>
+        </aside>
+
+        <div class="phase-stage">
+            <article class="phase-slide signal-slide active">
+                <div class="phase-heading">
+                    <p class="eyebrow">Entrada neuronal</p>
+                    <h2>Señal del ensayo</h2>
+                    <p>
+                        Esta es la señal neuronal procesada asociada al ensayo seleccionado. A partir
+                        de esta entrada, el decodificador genera una representación fonética y después
+                        el modelo de lenguaje obtiene el texto final.
+                    </p>
+                </div>
+
+                <figure class="signal-frame">
+                    <img th:if="${trial.signalImagePath != null}"
+                         th:src="@{${trial.signalImagePath}}"
+                         alt="Señal neuronal del ensayo">
+                    <figcaption th:if="${trial.signalImagePath == null}">
+                        Imagen de señal no disponible para este ensayo.
+                    </figcaption>
+                </figure>
+
+                <div class="shape-grid">
+                    <div>
+                        <span>Conjunto</span>
+                        <strong th:text="${trial.split}">val</strong>
+                    </div>
+                    <div>
+                        <span>Entrada</span>
+                        <strong th:text="${trial.inputShape}">(1, 902, 512)</strong>
+                    </div>
+                    <div>
+                        <span>Logits</span>
+                        <strong th:text="${trial.logitsShape}">(223, 41)</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 1</p>
+                    <h2>Suavizado gaussiano</h2>
+                    <p>
+                        Se reduce la variación brusca de la señal aplicando un filtro temporal a cada
+                        característica neuronal. No mezcla canales entre sí: suaviza cada característica
+                        usando sus valores vecinos en el tiempo.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Señal neuronal original</strong>
+                        <small>Secuencia temporal del ensayo</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>Filtro gaussiano temporal</strong>
+                        <small>Cada punto se recalcula usando valores cercanos de la misma característica.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Señal suavizada</strong>
+                        <small>Mismas características, evolución más continua</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 2</p>
+                    <h2>Adaptación específica por sesión</h2>
+                    <p>
+                        El registro neuronal puede variar entre sesiones. Esta capa aprendida ajusta
+                        la señal del día correspondiente para que el resto del modelo reciba una
+                        representación más estable.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Señal suavizada</strong>
+                        <small>Representación temporal tras preprocesamiento</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>Matriz/capa asociada a la sesión</strong>
+                        <small>Los valores se ajustan según el día de registro del ensayo.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Señal adaptada</strong>
+                        <small>Misma forma, valores ajustados</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 3</p>
+                    <h2>Activación y regularización</h2>
+                    <p>
+                        La activación introduce no linealidad y controla valores extremos. El dropout
+                        se usa durante el entrenamiento para reducir sobreajuste, aunque en inferencia
+                        no se apagan unidades aleatoriamente.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Señal adaptada</strong>
+                        <small>Salida de la capa específica de sesión</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>Softsign + Dropout</strong>
+                        <small>La señal se activa de forma no lineal y queda regularizada por el modelo entrenado.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Representación activada</strong>
+                        <small>Señal preparada para agruparse en ventanas</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 4</p>
+                    <h2>Agrupación temporal</h2>
+                    <p>
+                        La señal se reorganiza en ventanas temporales solapadas. Así, cada nuevo paso
+                        de la secuencia contiene información de varios instantes cercanos y no solo de
+                        un punto aislado.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Secuencia activada</strong>
+                        <small>Vectores ordenados en el tiempo</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>Ventanas temporales</strong>
+                        <small>Varios instantes consecutivos se agrupan en un único fragmento con contexto local.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Fragmentos con contexto local</strong>
+                        <small>Entrada reorganizada para la GRU</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 5</p>
+                    <h2>Red GRU multicapa</h2>
+                    <p>
+                        La GRU procesa los fragmentos como una secuencia y mantiene memoria temporal.
+                        En cada paso combina la entrada actual con información acumulada de pasos
+                        anteriores.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Ventanas temporales</strong>
+                        <small>Fragmentos de actividad neuronal</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>GRU recurrente multicapa</strong>
+                        <small>La secuencia se procesa manteniendo memoria temporal entre pasos.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Estados ocultos temporales</strong>
+                        <small>Representación interna de la secuencia</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide" th:if="${selectedModel == 'proposed'}">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase añadida</p>
+                    <h2>Adaptador residual</h2>
+                    <p>
+                        El modelo propuesto conserva la salida de la GRU y aprende una corrección
+                        pequeña en paralelo. La representación original no se sustituye, se ajusta.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Estados ocultos de la GRU</strong>
+                        <small>Representación aprendida por el baseline</small>
+                    </div>
+                    <div class="phase-visual process-visual proposed-visual">
+                        <span>Transformación</span>
+                        <strong>H + A(H)</strong>
+                        <small>Se suma una corrección ligera a la representación generada por la GRU.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Estados ocultos ajustados</strong>
+                        <small>Representación refinada antes de clasificar</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 6</p>
+                    <h2>Capa de salida fonética</h2>
+                    <p>
+                        La representación temporal se transforma en puntuaciones fonéticas. Para cada
+                        paso temporal, la red produce un vector con una puntuación por clase.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Representación temporal</strong>
+                        <small>Estados ocultos de la red</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>Capa lineal de clasificación</strong>
+                        <small>La representación temporal se proyecta a puntuaciones sobre clases fonéticas.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Logits fonéticos</strong>
+                        <small th:text="${trial.logitsShape}">(223, 41)</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide" th:if="${selectedModel == 'proposed'}">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase añadida</p>
+                    <h2>Corrector temporal de logits</h2>
+                    <p>
+                        La segunda mejora del modelo propuesto actúa sobre las puntuaciones fonéticas.
+                        Usa contexto temporal cercano para corregir los logits sin cambiar su forma.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Logits originales</strong>
+                        <small>Puntuaciones por clase fonética</small>
+                    </div>
+                    <div class="phase-visual process-visual proposed-visual">
+                        <span>Transformación</span>
+                        <strong>Corrección temporal residual</strong>
+                        <small>Los logits se refinan usando información de pasos temporales cercanos.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Logits corregidos</strong>
+                        <small>Misma forma, puntuaciones refinadas</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 7</p>
+                    <h2>Decodificación CTC</h2>
+                    <p>
+                        Para visualizar la salida neuronal se selecciona la clase más probable en cada
+                        instante y se eliminan repeticiones consecutivas y símbolos blank.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Logits fonéticos</strong>
+                        <small>Matriz temporal de puntuaciones</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>Argmax + colapso CTC</strong>
+                        <small>Se seleccionan clases probables y se eliminan blanks y repeticiones.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Fonemas predichos</strong>
+                        <small>Secuencia compacta de fonemas</small>
+                    </div>
+                </div>
+                <div class="stage-output">
+                    <span>Fonemas predichos</span>
+                    <strong class="phonemes" th:text="${prediction.predictedPhonemes}">Y UW | K AE N</strong>
+                </div>
+            </article>
+
+            <article class="phase-slide">
+                <div class="phase-heading">
+                    <p class="eyebrow">Fase 8</p>
+                    <h2>Modelo de lenguaje</h2>
+                    <p>
+                        El modelo de lenguaje trabaja con los logits completos y genera varias frases
+                        candidatas. Esta fase convierte la información fonética en texto natural.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Logits fonéticos completos</strong>
+                        <small>Conservan la incertidumbre del decodificador</small>
+                    </div>
+                    <div class="phase-visual process-visual">
+                        <span>Transformación</span>
+                        <strong>Decodificación lingüística</strong>
+                        <small>El modelo de lenguaje convierte las puntuaciones fonéticas en frases candidatas.</small>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Frases candidatas</strong>
+                        <small>Hipótesis de texto ordenadas</small>
+                    </div>
+                </div>
+                <ol class="candidates">
+                    <li th:each="candidate : ${prediction.candidates}">
+                        <span th:text="${candidate.candidateText}">candidate</span>
+                    </li>
+                </ol>
+            </article>
+
+            <article class="phase-slide final-stage">
+                <div class="phase-heading">
+                    <p class="eyebrow">Resultado</p>
+                    <h2>Texto final</h2>
+                    <p>
+                        Entre las hipótesis generadas se obtiene una frase final, que es la salida
+                        visible para el usuario de la aplicación.
+                    </p>
+                </div>
+                <div class="phase-flow">
+                    <div class="io-card">
+                        <span>Entrada</span>
+                        <strong>Candidatos del lenguaje</strong>
+                        <small>Opciones generadas por el decodificador</small>
+                    </div>
+                    <div class="phase-visual final-output">
+                        <span>Frase predicha</span>
+                        <strong th:text="${prediction.predictedText}">you can see the code</strong>
+                        <button class="icon-button"
+                                type="button"
+                                th:attr="data-speak=${prediction.predictedText}"
+                                onclick="speakFromButton(this)">
+                            Escuchar frase
+                        </button>
+                    </div>
+                    <div class="io-card">
+                        <span>Salida</span>
+                        <strong>Texto final</strong>
+                        <small th:text="${selectedModel == 'proposed' ? 'Modelo propuesto' : 'Baseline'}">Baseline</small>
+                    </div>
+                </div>
+
+                <div class="metric-row">
+                    <span th:if="${prediction.perValue != null}">
+                        PER <strong th:text="${#numbers.formatDecimal(prediction.perValue * 100, 1, 2)} + '%'">7.48%</strong>
+                    </span>
+                    <span th:if="${prediction.werValue != null}">
+                        WER <strong th:text="${#numbers.formatDecimal(prediction.werValue * 100, 1, 2)} + '%'">6.32%</strong>
+                    </span>
+                    <span th:if="${prediction.perValue == null and prediction.werValue == null}">
+                        Sin métricas locales en test
+                    </span>
+                </div>
+
+                <div class="reference-box">
+                    <h3>Frase real</h3>
+                    <p th:text="${trial.realSentence != null ? trial.realSentence : 'No disponible para ensayos de test.'}">
+                        You can see the code at this point as well.
+                    </p>
+                </div>
+            </article>
+
+            <article class="phase-slide comparison-slide" th:if="${#lists.size(trial.predictions) > 1}">
+                <div class="phase-heading">
+                    <p class="eyebrow">Comparación final</p>
+                    <h2>Baseline frente a modelo propuesto</h2>
+                    <p>
+                        Como última fase, se comparan las predicciones almacenadas para el mismo
+                        ensayo. Esto permite ver de forma directa las diferencias entre el baseline y
+                        el modelo propuesto.
+                    </p>
+                </div>
+
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Modelo</th>
+                            <th>Texto predicho</th>
+                            <th>PER</th>
+                            <th>WER</th>
+                            <th>Fonemas predichos</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="item : ${trial.predictions}">
+                            <td>
+                                <strong th:text="${item.modelLabel}">Baseline</strong>
+                                <span class="model-code" th:text="${item.modelName}">baseline</span>
+                            </td>
+                            <td class="sentence"
+                                th:text="${item.predictedText != null ? item.predictedText : 'Sin texto predicho'}">
+                                you can see the code
+                            </td>
+                            <td>
+                                <span th:if="${item.perValue != null}"
+                                      th:text="${#numbers.formatDecimal(item.perValue * 100, 1, 2)} + '%'">
+                                    7.48%
+                                </span>
+                                <span th:if="${item.perValue == null}">-</span>
+                            </td>
+                            <td>
+                                <span th:if="${item.werValue != null}"
+                                      th:text="${#numbers.formatDecimal(item.werValue * 100, 1, 2)} + '%'">
+                                    6.32%
+                                </span>
+                                <span th:if="${item.werValue == null}">-</span>
+                            </td>
+                            <td class="comparison-phonemes"
+                                th:text="${item.predictedPhonemes != null ? item.predictedPhonemes : 'Sin fonemas'}">
+                                Y UW | K AE N
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+    </section>
+</main>
+</body>
+</html>

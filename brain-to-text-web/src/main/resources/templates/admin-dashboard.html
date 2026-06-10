@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel admin - Brain-to-Text</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" th:href="@{/}">Brain-to-Text</a>
+    <nav class="nav-actions">
+        <a th:href="@{/trials}">Ensayos</a>
+        <a th:href="@{/admin}">Admin</a>
+        <form class="logout-form" th:action="@{/admin/logout}" method="post">
+            <button type="submit">Salir</button>
+        </form>
+    </nav>
+</header>
+
+<main class="page admin-page">
+    <section class="page-heading admin-heading">
+        <div>
+            <p class="eyebrow">Panel de administración</p>
+            <h1>Gestión de datos</h1>
+            <p th:text="'Sesión iniciada como ' + ${adminName}">
+                Sesión iniciada como Administrador
+            </p>
+        </div>
+    </section>
+
+    <section class="admin-stats" aria-label="Resumen de la base de datos">
+        <article>
+            <span>Ensayos</span>
+            <strong th:text="${stats.trialCount()}">100</strong>
+        </article>
+        <article>
+            <span>Predicciones</span>
+            <strong th:text="${stats.predictionCount()}">200</strong>
+        </article>
+        <article>
+            <span>Candidatos</span>
+            <strong th:text="${stats.candidateCount()}">500</strong>
+        </article>
+        <article>
+            <span>Usuarios admin</span>
+            <strong th:text="${stats.userCount()}">1</strong>
+        </article>
+    </section>
+
+    <p class="form-alert success" th:if="${adminMessage}" th:text="${adminMessage}">
+        Ensayo creado correctamente.
+    </p>
+    <p class="form-alert error" th:if="${adminError}" th:text="${adminError}">
+        No se pudo crear el ensayo.
+    </p>
+
+    <section class="admin-section">
+        <div class="section-title">
+            <p class="eyebrow">Nuevo registro</p>
+            <h2>Añadir ensayo</h2>
+            <p>
+                Esta acción crea la entrada base del ensayo. Las predicciones asociadas se cargan
+                aparte cuando ya han sido generadas por el modelo.
+            </p>
+        </div>
+
+        <form class="admin-form admin-grid-form" th:action="@{/admin/trials}" method="post">
+            <label>
+                Sesión
+                <input type="text" name="sessionName" placeholder="t15.2023.08.13" required>
+            </label>
+
+            <label>
+                Conjunto
+                <select name="split" required>
+                    <option value="val">val</option>
+                    <option value="test">test</option>
+                    <option value="train">train</option>
+                </select>
+            </label>
+
+            <label>
+                Trial
+                <input type="text" name="trialKey" placeholder="trial_0000" required>
+            </label>
+
+            <label>
+                Forma entrada
+                <input type="text" name="inputShape" placeholder="(1, 902, 512)">
+            </label>
+
+            <label>
+                Forma logits
+                <input type="text" name="logitsShape" placeholder="(223, 41)">
+            </label>
+
+            <label>
+                Ruta imagen señal
+                <input type="text" name="signalImagePath" placeholder="/images/signals/...png">
+            </label>
+
+            <label class="full-field">
+                Frase real
+                <textarea name="realSentence" rows="2" placeholder="Solo disponible en validación"></textarea>
+            </label>
+
+            <label class="full-field">
+                Fonemas reales
+                <textarea name="realPhonemes" rows="2" placeholder="Secuencia fonética real"></textarea>
+            </label>
+
+            <label class="full-field">
+                Notas
+                <textarea name="notes" rows="2" placeholder="Observaciones internas"></textarea>
+            </label>
+
+            <div class="full-field form-actions">
+                <button class="button primary" type="submit">Crear ensayo</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="admin-section">
+        <div class="section-title">
+            <p class="eyebrow">Registros almacenados</p>
+            <h2>Ensayos</h2>
+        </div>
+
+        <div class="admin-table">
+            <table>
+                <thead>
+                <tr>
+                    <th>Sesión</th>
+                    <th>Conjunto</th>
+                    <th>Trial</th>
+                    <th>Frase real</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="trial : ${trials}">
+                    <td th:text="${trial.sessionName}">t15.2023.08.13</td>
+                    <td><span class="badge" th:text="${trial.split}">val</span></td>
+                    <td th:text="${trial.trialKey}">trial_0000</td>
+                    <td class="sentence"
+                        th:text="${trial.realSentence != null ? trial.realSentence : 'Sin frase real'}">
+                        Sin frase real
+                    </td>
+                    <td class="actions">
+                        <a class="button ghost"
+                           th:href="@{/admin/trials/{id}/edit(id=${trial.id})}">
+                            Editar
+                        </a>
+                        <form th:action="@{/admin/trials/{id}/delete(id=${trial.id})}" method="post">
+                            <button class="danger-button" type="submit">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <section class="pagination-bar" aria-label="Paginación admin">
+            <a class="button ghost"
+               th:classappend="${trialPage.first} ? ' disabled'"
+               th:href="${trialPage.first} ? '#' : @{/admin(page=${trialPage.number - 1})}">
+                Anterior
+            </a>
+
+            <span>
+                Página <strong th:text="${trialPage.number + 1}">1</strong>
+                de <strong th:text="${trialPage.totalPages}">10</strong>
+            </span>
+
+            <a class="button ghost"
+               th:classappend="${trialPage.last} ? ' disabled'"
+               th:href="${trialPage.last} ? '#' : @{/admin(page=${trialPage.number + 1})}">
+                Siguiente
+            </a>
+        </section>
+    </section>
+</main>
+</body>
+</html>

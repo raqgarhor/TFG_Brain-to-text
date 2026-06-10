@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 
 import h5py
+import matplotlib
 import numpy as np
 import redis
 import torch
@@ -26,6 +27,9 @@ from evaluate_model_helpers import (  # noqa: E402
 )
 from modelo_baseline_adapter import BaselineGRUWithAdapter  # noqa: E402
 from rnn_model import GRUDecoder  # noqa: E402
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
 
 
 def sql_literal(value):
@@ -238,6 +242,7 @@ insert into trials (
     real_phonemes,
     input_shape,
     logits_shape,
+    signal_image_path,
     notes
 )
 values (
@@ -248,6 +253,7 @@ values (
     {sql_literal(trial["real_phonemes"])},
     {sql_literal(trial["input_shape"])},
     {sql_literal(trial["logits_shape"])},
+    {sql_literal(trial["signal_image_path"])},
     {sql_literal(trial["notes"])}
 )
 on conflict (session_name, split, trial_key) do update set
@@ -255,12 +261,43 @@ on conflict (session_name, split, trial_key) do update set
     real_phonemes = excluded.real_phonemes,
     input_shape = excluded.input_shape,
     logits_shape = excluded.logits_shape,
+    signal_image_path = excluded.signal_image_path,
     notes = excluded.notes,
     updated_at = now();
 """
 
 
-def process_trial(item, model_args, baseline, proposed, redis_client, checkpoint_per):
+def save_signal_image(features, smoothed, item, output_dir, feature_index):
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    original = features[0, :, feature_index].detach().cpu().numpy()
+    smooth = smoothed[0, :, feature_index].detach().cpu().numpy()
+    filename = f"{item['session']}_{item['split']}_{item['trial_key']}_feature_{feature_index}.png"
+    file_path = output_dir / filename
+
+    plt.figure(figsize=(10, 4), dpi=120)
+    plt.plot(original, color="#2b6cb0", linewidth=0.8, alpha=0.45, label="Senal original")
+    plt.plot(
+        np.arange(len(smooth)),
+        smooth,
+        color="#d97706",
+        linewidth=1.8,
+        label="Suavizado gaussiano",
+    )
+    plt.title(f"{item['session']} - {item['trial_key']} - caracteristica {feature_index}")
+    plt.xlabel("Tiempo")
+    plt.ylabel("Valor de la caracteristica neuronal")
+    plt.grid(True, alpha=0.25)
+    plt.legend(loc="upper right")
+    plt.tight_layout()
+    plt.savefig(file_path)
+    plt.close()
+
+    return f"/images/signals/{filename}"
+
+
+def process_trial(item, model_args, baseline, proposed, redis_client, checkpoint_per, image_dir, feature_index):
     with h5py.File(item["hdf5_path"], "r") as h5_file:
         trial = h5_file[item["trial_key"]]
         features = torch.tensor(trial["input_features"][:], dtype=torch.float32).unsqueeze(0)
@@ -297,6 +334,7 @@ def process_trial(item, model_args, baseline, proposed, redis_client, checkpoint
     proposed_ids = decode_argmax_ids(proposed_logits)
     baseline_partial, baseline_candidates = lm_decode(redis_client, baseline_logits)
     proposed_partial, proposed_candidates = lm_decode(redis_client, proposed_logits)
+    signal_image_path = save_signal_image(features, smoothed, item, image_dir, feature_index)
 
     trial_info = {
         "session_name": item["session"],
@@ -306,6 +344,7 @@ def process_trial(item, model_args, baseline, proposed, redis_client, checkpoint
         "real_phonemes": phoneme_text(true_ids) if true_ids is not None else None,
         "input_shape": str(tuple(smoothed.shape)),
         "logits_shape": str(tuple(baseline_logits.shape)),
+        "signal_image_path": signal_image_path,
         "notes": "Ensayo generado localmente para la aplicacion demostradora.",
     }
 
@@ -352,6 +391,8 @@ def main():
     parser.add_argument("--proposed_checkpoint", default=str(THIS_DIR / "salidas" / "baseline_adapter_logit" / "best_checkpoint.pt"))
     parser.add_argument("--data_dir", default=str(REPO_ROOT / "data" / "hdf5_data_final"))
     parser.add_argument("--output", default=str(PROJECT_ROOT / "brain-to-text-web" / "database" / "002_seed_demo_results.sql"))
+    parser.add_argument("--image_dir", default=str(PROJECT_ROOT / "brain-to-text-web" / "src" / "main" / "resources" / "static" / "images" / "signals"))
+    parser.add_argument("--feature_index", type=int, default=0)
     parser.add_argument("--val_count", type=int, default=50)
     parser.add_argument("--test_count", type=int, default=50)
     parser.add_argument("--candidate_count", type=int, default=5)
@@ -402,6 +443,8 @@ def main():
             proposed,
             redis_client,
             checkpoint_per,
+            args.image_dir,
+            args.feature_index,
         )
         statements.append(trial_sql(trial_info))
         for prediction in predictions:

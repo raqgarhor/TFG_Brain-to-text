@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Brain-to-Text</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" th:href="@{/}">Brain-to-Text</a>
+    <nav class="nav-actions">
+        <a th:href="@{/trials}">Ensayos</a>
+        <a th:href="@{/admin}">Admin</a>
+    </nav>
+</header>
+
+<main class="page admin-login-page">
+    <section class="admin-login-card">
+        <p class="eyebrow">Zona privada</p>
+        <h1>Acceso administrador</h1>
+        <p>
+            La consulta de ensayos es pública. Esta zona se reserva para gestionar los datos
+            almacenados en la aplicación.
+        </p>
+
+        <p class="form-alert error" th:if="${loginError}" th:text="${loginError}">
+            Usuario o contraseña incorrectos.
+        </p>
+
+        <form class="admin-form" th:action="@{/admin/login}" method="post">
+            <label>
+                Usuario
+                <input type="text" name="username" autocomplete="username" required>
+            </label>
+
+            <label>
+                Contraseña
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+
+            <button class="button primary" type="submit">Entrar</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

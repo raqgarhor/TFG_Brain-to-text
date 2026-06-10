@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ensayos - Brain-to-Text</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" th:href="@{/}">Brain-to-Text</a>
+    <nav class="nav-actions">
+        <a th:href="@{/trials}">Ensayos</a>
+        <a th:href="@{/admin}">Admin</a>
+    </nav>
+</header>
+
+<main class="page">
+    <section class="page-heading">
+        <div>
+            <p class="eyebrow">Resultados almacenados</p>
+            <h1>Ensayos disponibles</h1>
+            <p>Selecciona un ensayo para consultar predicciones, fonemas y candidatos.</p>
+        </div>
+    </section>
+
+    <section class="filter-bar" aria-label="Filtros">
+        <span th:text="${trialPage.totalElements} + ' ensayos'">100 ensayos</span>
+        <nav>
+            <a th:classappend="${selectedSplit == 'all'} ? ' active'" th:href="@{/trials(page=0)}">Todos</a>
+            <a th:each="split : ${splits}"
+               th:text="${#strings.toUpperCase(split)}"
+               th:classappend="${selectedSplit == split} ? ' active'"
+               th:href="@{/trials(split=${split}, page=0)}">VAL</a>
+        </nav>
+    </section>
+
+    <section class="pagination-bar" aria-label="Paginación">
+        <a class="button ghost"
+           th:classappend="${trialPage.first} ? ' disabled'"
+           th:href="${trialPage.first} ? '#' : @{/trials(split=${selectedSplit}, page=${trialPage.number - 1})}">
+            Anterior
+        </a>
+
+        <span>
+            Página <strong th:text="${trialPage.number + 1}">1</strong>
+            de <strong th:text="${trialPage.totalPages}">9</strong>
+        </span>
+
+        <a class="button ghost"
+           th:classappend="${trialPage.last} ? ' disabled'"
+           th:href="${trialPage.last} ? '#' : @{/trials(split=${selectedSplit}, page=${trialPage.number + 1})}">
+            Siguiente
+        </a>
+    </section>
+
+    <section class="trial-grid" aria-label="Listado de ensayos">
+        <article class="trial-card" th:each="trial : ${trials}">
+            <div class="trial-card-head">
+                <span class="badge" th:text="${trial.split}">val</span>
+                <span class="trial-session" th:text="${trial.sessionName}">t15.2023.08.13</span>
+            </div>
+
+            <h2 th:text="${trial.trialKey}">trial_0000</h2>
+
+            <p class="trial-sentence"
+               th:text="${trial.realSentence != null ? trial.realSentence : 'Ensayo de test sin frase real disponible.'}">
+                You can see the code at this point as well.
+            </p>
+
+            <div class="trial-card-footer">
+                <span th:text="${trial.inputShape != null ? trial.inputShape : 'Señal neuronal'}">(1, 902, 512)</span>
+                <button class="button ghost"
+                        type="button"
+                        th:attr="data-select-url=@{/trials/{id}/model(id=${trial.id})},
+                                 data-trial=${trial.trialKey}"
+                        onclick="openModelModal(this)">
+                    Ver texto
+                </button>
+            </div>
+        </article>
+    </section>
+</main>
+
+<div class="modal-backdrop" id="modelModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button class="modal-close" type="button" onclick="closeModelModal()">Cerrar</button>
+        <p class="eyebrow">Seleccionar modelo</p>
+        <h2 id="modalTitle">¿Qué resultado quieres ver?</h2>
+        <p id="modalTrial">Elige el modelo para continuar con el flujo de decodificación.</p>
+
+        <div class="modal-actions">
+            <form id="baselineForm" method="post">
+                <input type="hidden" name="modelName" value="baseline">
+                <button class="model-option" type="submit">
+                    <strong>Baseline</strong>
+                    <span>Modelo RNN-GRU preentrenado</span>
+                </button>
+            </form>
+            <form id="proposedForm" method="post">
+                <input type="hidden" name="modelName" value="proposed">
+                <button class="model-option proposed" type="submit">
+                    <strong>Modelo propuesto</strong>
+                    <span>Adaptador residual y corrector temporal</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModelModal(button) {
+        const modal = document.getElementById("modelModal");
+        document.getElementById("baselineForm").action = button.dataset.selectUrl;
+        document.getElementById("proposedForm").action = button.dataset.selectUrl;
+        document.getElementById("modalTrial").textContent = button.dataset.trial + " · Elige el modelo para ver sus fases. Podrás cambiar el modelo dentro del flujo de decodificación sin perder el progreso.";
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModelModal() {
+        const modal = document.getElementById("modelModal");
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeModelModal();
+        }
+    });
+</script>
+</body>
+</html>

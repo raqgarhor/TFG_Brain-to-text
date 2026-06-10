@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain-to-Text demo</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="landing-only">
+    <section class="hero-showcase">
+        <div class="hero-copy">
+            <div class="tag">Brain-to-Text</div>
+
+            <h1>
+                Decodificación de señales neuronales a <span>texto</span>
+            </h1>
+
+            <p>
+                Aplicación demostradora para visualizar ensayos brain-to-text,
+                comparar el baseline preentrenado con el modelo propuesto y consultar
+                las frases generadas a partir de actividad neuronal.
+            </p>
+
+            <a th:href="@{/trials}" class="btn">Ver más</a>
+        </div>
+
+        <div class="hero-visual-showcase">
+            <div class="halo"></div>
+            <div class="wave"></div>
+            <div class="wave wave-2"></div>
+            <div class="wave wave-3"></div>
+            <div class="signal"></div>
+
+            <div class="particle p1"></div>
+            <div class="particle p2"></div>
+            <div class="particle p3"></div>
+            <div class="particle p4"></div>
+
+            <div class="hero-image">
+                <img th:src="@{/images/mindwriting.gif}"
+                     alt="Decodificación neuronal a texto">
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>
