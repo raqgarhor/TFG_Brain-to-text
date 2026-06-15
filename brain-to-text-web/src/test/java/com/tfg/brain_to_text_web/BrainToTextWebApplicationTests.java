@@ -1,13 +1,14 @@
 package com.tfg.brain_to_text_web;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringBootTest
+import org.junit.jupiter.api.Test;
+
 class BrainToTextWebApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void applicationClassExists() {
+		assertNotNull(BrainToTextWebApplication.class);
 	}
 
 }

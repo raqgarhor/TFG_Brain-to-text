@@ -444,48 +444,47 @@
                     </p>
                 </div>
 
-                <div class="comparison-table">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Modelo</th>
-                            <th>Texto predicho</th>
-                            <th>PER</th>
-                            <th>WER</th>
-                            <th>Fonemas predichos</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="item : ${trial.predictions}">
-                            <td>
-                                <strong th:text="${item.modelLabel}">Baseline</strong>
-                                <span class="model-code" th:text="${item.modelName}">baseline</span>
-                            </td>
-                            <td class="sentence"
-                                th:text="${item.predictedText != null ? item.predictedText : 'Sin texto predicho'}">
+                <div class="comparison-grid">
+                    <article class="comparison-card" th:each="item : ${trial.predictions}">
+                        <div class="comparison-card-header">
+                            <h3 th:text="${item.modelLabel}">Baseline</h3>
+                            <span class="model-code" th:text="${item.modelName}">baseline</span>
+                        </div>
+
+                        <div class="comparison-field">
+                            <span>Texto predicho</span>
+                            <strong th:text="${item.predictedText != null ? item.predictedText : 'Sin texto predicho'}">
                                 you can see the code
-                            </td>
-                            <td>
-                                <span th:if="${item.perValue != null}"
-                                      th:text="${#numbers.formatDecimal(item.perValue * 100, 1, 2)} + '%'">
+                            </strong>
+                        </div>
+
+                        <div class="comparison-metrics">
+                            <div>
+                                <span>PER</span>
+                                <strong th:if="${item.perValue != null}"
+                                        th:text="${#numbers.formatDecimal(item.perValue * 100, 1, 2)} + '%'">
                                     7.48%
-                                </span>
-                                <span th:if="${item.perValue == null}">-</span>
-                            </td>
-                            <td>
-                                <span th:if="${item.werValue != null}"
-                                      th:text="${#numbers.formatDecimal(item.werValue * 100, 1, 2)} + '%'">
+                                </strong>
+                                <strong th:if="${item.perValue == null}">-</strong>
+                            </div>
+                            <div>
+                                <span>WER</span>
+                                <strong th:if="${item.werValue != null}"
+                                        th:text="${#numbers.formatDecimal(item.werValue * 100, 1, 2)} + '%'">
                                     6.32%
-                                </span>
-                                <span th:if="${item.werValue == null}">-</span>
-                            </td>
-                            <td class="comparison-phonemes"
-                                th:text="${item.predictedPhonemes != null ? item.predictedPhonemes : 'Sin fonemas'}">
+                                </strong>
+                                <strong th:if="${item.werValue == null}">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="comparison-field">
+                            <span>Fonemas predichos</span>
+                            <p class="comparison-phonemes"
+                               th:text="${item.predictedPhonemes != null ? item.predictedPhonemes : 'Sin fonemas'}">
                                 Y UW | K AE N
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
+                            </p>
+                        </div>
+                    </article>
                 </div>
             </article>
         </div>
