@@ -39,7 +39,7 @@
 
     <section class="admin-section">
         <div class="section-title">
-            <p class="eyebrow">RF11</p>
+            <p class="eyebrow">Ensayo</p>
             <h2>Modificar ensayo</h2>
             <p>Permite corregir metadatos, completar frases reales o actualizar rutas de imagen.</p>
         </div>
@@ -104,7 +104,7 @@
 
     <section class="admin-section">
         <div class="section-title">
-            <p class="eyebrow">RF13</p>
+            <p class="eyebrow">Predicción</p>
             <h2>Crear predicción</h2>
             <p>
                 Permite añadir una predicción asociada a este ensayo, indicando el modelo utilizado,
@@ -114,20 +114,33 @@
 
         <form class="admin-form admin-grid-form"
               th:action="@{/admin/trials/{id}/predictions(id=${trial.id})}"
-              method="post">
+              method="post"
+              data-prediction-create-form>
             <label>
-                Nombre interno del modelo
-                <input type="text" name="modelName" placeholder="baseline o proposed" required>
+                Modelo
+                <select name="modelName" required data-model-select>
+                    <option value="" selected disabled>Selecciona un modelo</option>
+                    <option value="baseline"
+                            data-label="Baseline RNN-GRU preentrenado"
+                            data-checkpoint="0.1010">
+                        Baseline RNN-GRU
+                    </option>
+                    <option value="proposed"
+                            data-label="Modelo propuesto con adaptador residual y corrector temporal"
+                            data-checkpoint="0.0748">
+                        Modelo propuesto
+                    </option>
+                </select>
             </label>
 
             <label>
                 Etiqueta visible
-                <input type="text" name="modelLabel" placeholder="Baseline RNN-GRU" required>
+                <input type="text" name="modelLabel" placeholder="Se rellena al elegir modelo" required data-model-label>
             </label>
 
             <label>
                 PER checkpoint
-                <input type="text" name="checkpointPer" placeholder="0.0748">
+                <input type="text" name="checkpointPer" placeholder="Se rellena al elegir modelo" data-model-checkpoint>
             </label>
 
             <label>
@@ -168,7 +181,7 @@
 
     <section class="admin-section">
         <div class="section-title">
-            <p class="eyebrow">RF13 y RF14</p>
+            <p class="eyebrow">Gestión de resultados</p>
             <h2>Predicciones y candidatos almacenados</h2>
             <p>
                 Cada predicción puede modificarse o eliminarse. Sus frases candidatas también pueden
@@ -275,5 +288,18 @@
         </p>
     </section>
 </main>
+<script>
+    document.querySelectorAll("[data-prediction-create-form]").forEach((form) => {
+        const select = form.querySelector("[data-model-select]");
+        const labelInput = form.querySelector("[data-model-label]");
+        const checkpointInput = form.querySelector("[data-model-checkpoint]");
+
+        select?.addEventListener("change", () => {
+            const option = select.selectedOptions[0];
+            labelInput.value = option?.dataset.label || "";
+            checkpointInput.value = option?.dataset.checkpoint || "";
+        });
+    });
+</script>
 </body>
 </html>
