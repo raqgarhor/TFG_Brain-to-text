@@ -179,7 +179,7 @@
         </form>
     </section>
 
-    <section class="admin-section">
+    <section class="admin-section" id="predictions-admin" th:attr="data-active-model=${activePredictionModel}">
         <div class="section-title">
             <p class="eyebrow">Gestión de resultados</p>
             <h2>Predicciones y candidatos almacenados</h2>
@@ -189,7 +189,18 @@
             </p>
         </div>
 
-        <article class="prediction-admin-card" th:each="prediction : ${predictions}">
+        <div class="admin-model-tabs" th:if="${!#lists.isEmpty(predictions)}">
+            <button type="button"
+                    th:each="prediction : ${predictions}"
+                    th:text="${prediction.modelName == 'baseline' ? 'Baseline' : (prediction.modelName == 'proposed' ? 'Modelo propuesto' : prediction.modelLabel)}"
+                    th:attr="data-admin-model-tab=${prediction.modelName}">
+                Baseline
+            </button>
+        </div>
+
+        <article class="prediction-admin-card"
+                 th:each="prediction : ${predictions}"
+                 th:attr="data-admin-model-panel=${prediction.modelName}">
             <div class="prediction-admin-title">
                 <div>
                     <p class="eyebrow" th:text="${prediction.modelName}">baseline</p>
@@ -205,8 +216,11 @@
                   th:action="@{/admin/trials/{trialId}/predictions/{predictionId}(trialId=${trial.id}, predictionId=${prediction.id})}"
                   method="post">
                 <label>
-                    Nombre interno
-                    <input type="text" name="modelName" th:value="${prediction.modelName}" required>
+                    Modelo
+                    <select name="modelName" required>
+                        <option value="baseline" th:selected="${prediction.modelName == 'baseline'}">Baseline RNN-GRU</option>
+                        <option value="proposed" th:selected="${prediction.modelName == 'proposed'}">Modelo propuesto</option>
+                    </select>
                 </label>
 
                 <label>
@@ -258,7 +272,7 @@
                 <h4>Candidatos del modelo de lenguaje</h4>
 
                 <form class="candidate-form"
-                      th:action="@{/admin/trials/{trialId}/predictions/{predictionId}/candidates(trialId=${trial.id}, predictionId=${prediction.id})}"
+                      th:action="@{/admin/trials/{trialId}/predictions/{predictionId}/candidates(trialId=${trial.id}, predictionId=${prediction.id}, model=${prediction.modelName})}"
                       method="post">
                     <input type="number" name="rank" min="1" placeholder="Rank" required>
                     <input type="text" name="candidateText" placeholder="Nueva frase candidata" required>
@@ -267,14 +281,14 @@
 
                 <div class="candidate-list">
                     <div class="candidate-row" th:each="candidate : ${prediction.candidates}">
-                        <form th:action="@{/admin/trials/{trialId}/candidates/{candidateId}(trialId=${trial.id}, candidateId=${candidate.id})}"
+                        <form th:action="@{/admin/trials/{trialId}/candidates/{candidateId}(trialId=${trial.id}, candidateId=${candidate.id}, model=${prediction.modelName})}"
                               method="post">
                             <input type="number" name="rank" min="1" th:value="${candidate.rank}" required>
                             <input type="text" name="candidateText" th:value="${candidate.candidateText}" required>
                             <button class="button ghost" type="submit">Guardar</button>
                         </form>
 
-                        <form th:action="@{/admin/trials/{trialId}/candidates/{candidateId}/delete(trialId=${trial.id}, candidateId=${candidate.id})}"
+                        <form th:action="@{/admin/trials/{trialId}/candidates/{candidateId}/delete(trialId=${trial.id}, candidateId=${candidate.id}, model=${prediction.modelName})}"
                               method="post">
                             <button class="danger-button" type="submit">Eliminar</button>
                         </form>
@@ -300,6 +314,33 @@
             checkpointInput.value = option?.dataset.checkpoint || "";
         });
     });
+
+    const predictionsAdmin = document.querySelector("[data-active-model]");
+    if (predictionsAdmin) {
+        const tabs = [...predictionsAdmin.querySelectorAll("[data-admin-model-tab]")];
+        const panels = [...predictionsAdmin.querySelectorAll("[data-admin-model-panel]")];
+
+        const activatePrediction = (modelName) => {
+            const fallback = tabs[0]?.dataset.adminModelTab;
+            const activeModel = modelName || fallback;
+
+            tabs.forEach((tab) => {
+                const isActive = tab.dataset.adminModelTab === activeModel;
+                tab.classList.toggle("is-active", isActive);
+            });
+
+            panels.forEach((panel) => {
+                const isActive = panel.dataset.adminModelPanel === activeModel;
+                panel.hidden = !isActive;
+            });
+        };
+
+        tabs.forEach((tab) => {
+            tab.addEventListener("click", () => activatePrediction(tab.dataset.adminModelTab));
+        });
+
+        activatePrediction(predictionsAdmin.dataset.activeModel);
+    }
 </script>
 </body>
 </html>

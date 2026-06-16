@@ -83,6 +83,7 @@ public class AdminController {
     @GetMapping("/admin/trials/{id}/edit")
     public String editTrial(
             @PathVariable Long id,
+            @RequestParam(required = false, name = "model") String activeModel,
             HttpSession session,
             Model model
     ) {
@@ -94,6 +95,7 @@ public class AdminController {
         model.addAttribute("adminName", session.getAttribute(ADMIN_NAME));
         model.addAttribute("trial", trial);
         model.addAttribute("predictions", adminService.findPredictionsForTrial(id));
+        model.addAttribute("activePredictionModel", activeModel == null || activeModel.isBlank() ? "baseline" : activeModel);
         return "admin-trial-edit";
     }
 
@@ -224,7 +226,7 @@ public class AdminController {
         } catch (RuntimeException exception) {
             redirectAttributes.addFlashAttribute("adminError", "No se pudo crear la predicción. Revisa si ya existe para ese modelo.");
         }
-        return "redirect:/admin/trials/" + trialId + "/edit";
+        return redirectToPredictionAdmin(trialId, modelName);
     }
 
     @PostMapping("/admin/trials/{trialId}/predictions/{predictionId}")
@@ -264,7 +266,7 @@ public class AdminController {
         } catch (RuntimeException exception) {
             redirectAttributes.addFlashAttribute("adminError", "No se pudo actualizar la predicción.");
         }
-        return "redirect:/admin/trials/" + trialId + "/edit";
+        return redirectToPredictionAdmin(trialId, modelName);
     }
 
     @PostMapping("/admin/trials/{trialId}/predictions/{predictionId}/delete")
@@ -280,7 +282,7 @@ public class AdminController {
 
         adminService.deletePrediction(predictionId);
         redirectAttributes.addFlashAttribute("adminMessage", "Predicción eliminada correctamente.");
-        return "redirect:/admin/trials/" + trialId + "/edit";
+        return "redirect:/admin/trials/" + trialId + "/edit#predictions-admin";
     }
 
     @PostMapping("/admin/trials/{trialId}/predictions/{predictionId}/candidates")
@@ -289,6 +291,7 @@ public class AdminController {
             @PathVariable Long predictionId,
             @RequestParam String rank,
             @RequestParam String candidateText,
+            @RequestParam(required = false) String model,
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
@@ -302,7 +305,7 @@ public class AdminController {
         } catch (RuntimeException exception) {
             redirectAttributes.addFlashAttribute("adminError", "No se pudo crear el candidato.");
         }
-        return "redirect:/admin/trials/" + trialId + "/edit";
+        return redirectToPredictionAdmin(trialId, model);
     }
 
     @PostMapping("/admin/trials/{trialId}/candidates/{candidateId}")
@@ -311,6 +314,7 @@ public class AdminController {
             @PathVariable Long candidateId,
             @RequestParam String rank,
             @RequestParam String candidateText,
+            @RequestParam(required = false) String model,
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
@@ -324,13 +328,14 @@ public class AdminController {
         } catch (RuntimeException exception) {
             redirectAttributes.addFlashAttribute("adminError", "No se pudo actualizar el candidato.");
         }
-        return "redirect:/admin/trials/" + trialId + "/edit";
+        return redirectToPredictionAdmin(trialId, model);
     }
 
     @PostMapping("/admin/trials/{trialId}/candidates/{candidateId}/delete")
     public String deleteCandidate(
             @PathVariable Long trialId,
             @PathVariable Long candidateId,
+            @RequestParam(required = false) String model,
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
@@ -340,7 +345,7 @@ public class AdminController {
 
         adminService.deleteCandidate(candidateId);
         redirectAttributes.addFlashAttribute("adminMessage", "Candidato eliminado correctamente.");
-        return "redirect:/admin/trials/" + trialId + "/edit";
+        return redirectToPredictionAdmin(trialId, model);
     }
 
     private String startAdminSession(AppUser admin, HttpSession session) {
@@ -351,5 +356,12 @@ public class AdminController {
 
     private boolean isAdmin(HttpSession session) {
         return session.getAttribute(ADMIN_ID) != null;
+    }
+
+    private String redirectToPredictionAdmin(Long trialId, String modelName) {
+        if (modelName == null || modelName.isBlank()) {
+            return "redirect:/admin/trials/" + trialId + "/edit#predictions-admin";
+        }
+        return "redirect:/admin/trials/" + trialId + "/edit?model=" + modelName + "#predictions-admin";
     }
 }
